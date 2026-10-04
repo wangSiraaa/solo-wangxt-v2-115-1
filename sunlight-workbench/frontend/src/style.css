@@ -35,3 +35,25 @@ select, button { padding: 6px; }
 .north-label { color: #ff8a80; font-size: 12px; background: rgba(0,0,0,.5);
   padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 .trace { font-size: 12px; background: #eef4ff; padding: 8px; border-radius: 6px; }
+
+/* 运行对比 */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 12px;
+  margin: 6px 0; }
+.compare-table th { text-align: left; border-bottom: 2px solid #ccc;
+  padding: 4px; font-size: 11px; color: #555; }
+.compare-table td { border-bottom: 1px solid #eee; padding: 4px;
+  vertical-align: top; }
+.compare-table tbody tr { cursor: pointer; }
+.compare-table tbody tr:hover { background: #f0f6ff; }
+.compare-table tr.selected { background: #e3ecff; }
+.diff-pos { color: #1b7f3b; font-weight: 600; }
+.diff-neg { color: #b00020; font-weight: 600; }
+.missing-badge { display: inline-block; font-size: 11px; color: #8a5a00;
+  background: #fff7e0; border: 1px solid #e0c070; border-radius: 4px;
+  padding: 1px 6px; }
+.issue { margin: 4px 0; font-size: 12px; }
+.compare-detail { border-top: 1px dashed #ccc; margin-top: 8px;
+  padding-top: 4px; font-size: 12px; display: grid; gap: 6px; }
+.side-detail { background: #f6f8fb; border: 1px solid #dde3ec;
+  border-radius: 6px; padding: 6px; display: grid; gap: 4px; }
+.side-detail.missing { background: #fff7e0; border-color: #e0c070; }

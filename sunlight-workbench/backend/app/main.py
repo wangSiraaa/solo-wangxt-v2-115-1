@@ -1,4 +1,4 @@
-"""FastAPI 入口：场景 / 测点 / 分析运行 / 快照 / 单点遮挡追查。"""
+"""FastAPI 入口：场景 / 测点 / 分析运行 / 运行对比 / 快照 / 单点遮挡追查。"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from . import models, seed
 from .analysis import MeasurePointGeom, analyze_point
+from .compare import build_comparison
 from .db import Base, engine, get_db
 from .geometry import BuildingGeom, build_scene
 from .solar import enu_to_model, sun_vector_enu, solar_positions
@@ -145,6 +146,71 @@ def run_analysis(req: RunRequest, db: Session = Depends(get_db)):
             fine_samples=r["fine_samples"], summary=r["summary"]))
     db.commit()
     return {"run_id": run.id, "snapshot_id": snap.id, "disclaimer": DISCLAIMER}
+
+
+# ---------- 运行历史与双运行对比 ----------
+
+def _run_meta(run: models.Run, point_ids: list[int] | None = None) -> dict:
+    meta = {
+        "run_id": run.id, "scene_id": run.scene_id,
+        "snapshot_id": run.snapshot_id, "date": str(run.run_date),
+        "step_minutes": run.step_minutes,
+        "created_at": str(run.created_at),
+    }
+    if point_ids is not None:
+        meta["point_ids"] = point_ids
+        meta["point_count"] = len(point_ids)
+    return meta
+
+
+@app.get("/api/scenes/{scene_id}/runs")
+def list_runs(scene_id: int, db: Session = Depends(get_db)):
+    """同场景历史运行列表（供对比选择；结果始终关联各自快照）。"""
+    if not db.get(models.Scene, scene_id):
+        raise HTTPException(404, "场景不存在")
+    runs = (db.query(models.Run).filter_by(scene_id=scene_id)
+            .order_by(models.Run.id.desc()).all())
+    pid_rows = (db.query(models.RunPointResult.run_id,
+                         models.RunPointResult.point_id)
+                .filter(models.RunPointResult.run_id
+                        .in_([r.id for r in runs])).all()) if runs else []
+    pids: dict[int, list[int]] = {}
+    for run_id, point_id in pid_rows:
+        pids.setdefault(run_id, []).append(point_id)
+    return [_run_meta(r, sorted(pids.get(r.id, []))) for r in runs]
+
+
+def _snapshot_points(db: Session, run: models.Run) -> dict[int, dict]:
+    """该次运行快照里的测点身份信息（名称/窗号，以快照为准）。"""
+    snap = db.get(models.Snapshot, run.snapshot_id)
+    pts = (snap.payload.get("points") if snap else None) or []
+    return {int(p["id"]): {"name": p.get("name", f"#{p['id']}"),
+                           "window_id": p.get("window_id", "")} for p in pts}
+
+
+# 注意：必须声明在 /api/analysis/{run_id} 之前，否则 "compare" 会被当作 run_id
+@app.get("/api/analysis/compare")
+def compare_runs(run_a: int, run_b: int, db: Session = Depends(get_db)):
+    """双运行对比：按测点身份对齐，输出两侧日期/累计分钟/分钟差/主要遮挡物。
+
+    仅同场景、同步长且有共同测点的两次运行给出数值差；缺失测点明确
+    标记（diff 为 null），绝不按 0 计入。
+    """
+    a = db.get(models.Run, run_a)
+    b = db.get(models.Run, run_b)
+    if not a or not b:
+        raise HTTPException(404, "运行不存在")
+    if a.scene_id != b.scene_id:
+        raise HTTPException(400, "两次运行不属于同一场景，无法对比")
+    res_a = {r.point_id: {"summary": r.summary, "fine_samples": r.fine_samples}
+             for r in a.results}
+    res_b = {r.point_id: {"summary": r.summary, "fine_samples": r.fine_samples}
+             for r in b.results}
+    out = build_comparison(
+        _run_meta(a), res_a, _snapshot_points(db, a),
+        _run_meta(b), res_b, _snapshot_points(db, b))
+    out["disclaimer"] = DISCLAIMER
+    return out
 
 
 @app.get("/api/analysis/{run_id}")

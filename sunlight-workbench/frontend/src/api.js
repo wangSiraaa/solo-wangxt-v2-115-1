@@ -18,6 +18,8 @@ export const api = {
       body: JSON.stringify({ scene_id, date, step_minutes }),
     }),
   runResult: (runId) => req(`/analysis/${runId}`),
+  runs: (sceneId) => req(`/scenes/${sceneId}/runs`),
+  compare: (runA, runB) => req(`/analysis/compare?run_a=${runA}&run_b=${runB}`),
   trace: (runId, pointId, time) =>
     req(`/analysis/${runId}/points/${pointId}/trace` + (time ? `?time=${time}` : '')),
   snapshot: (id) => req(`/snapshots/${id}`),

@@ -45,6 +45,7 @@ cd frontend && npm install && npm run dev
 | `test_interval_folding_handcalc` | 合成布尔序列折叠为连续区间 |
 | `test_winter_summer_shaded_point` | 同一测点冬季日照 < 夏季；逐样本与方位修正后的解析阈值一致 |
 | `test_api_logic` | 快照结构、几何重建、遮挡物归属 |
+| `test_compare` | 双运行对比：diff=B−A、缺项不算 0、步长不同不出数值表、遮挡物排序、端点校验 |
 
 种子场景：**S1 邻楼遮挡**（正南板楼+东南塔楼 vs 目标楼，跨冬夏 2026-01-15 / 2026-07-15 对比）与 **S2 旋转场景**（S1 旋转 30°，物理等价，验证旋转口径——同日期结果逐样本一致）。
 
@@ -54,6 +55,13 @@ cd frontend && npm install && npm run dev
 
 - 每次运行先生成**场景快照**（`snapshots.payload` 含完整几何+坐标基准），结果关联快照 ID，场景后续被编辑不影响追溯（`GET /api/snapshots/{id}`）。
 - 每个细样本都记录遮挡物名称/距离/命中点，`GET /api/analysis/{run}/points/{point}/trace[?time=...]` 支持单点追查；前端悬停遮挡时段即高亮对应建筑。
+
+## 运行对比（同场景双运行）
+
+- `GET /api/scenes/{scene_id}/runs`：同场景历史运行列表（日期/步长/测点数/快照 ID）。
+- `GET /api/analysis/compare?run_a=..&run_b=..`：按测点身份（point_id）对齐，逐点给出两侧日期、连续口径累计分钟、分钟差（B−A）与主要遮挡物（按遮挡分钟排序）。
+- **可比性门槛**：仅同场景、同采样步长且有共同测点的两次运行给出数值差；步长不同只返回原因、不出差异表。测点缺失（仅单侧运行）显式标记 `missing_in_a/b`，**diff 为 null，绝不按 0 计入**汇总。
+- 前端在结果面板选择基准/对比两次运行查看差异表，点击行或三维测点球可分侧追查原运行遮挡物；对比选择写入 URL（`?scene=..&compare=A,B`），刷新或分享链接后仍可打开同一对比。
 
 ## 已知局限（必须阅读）
 

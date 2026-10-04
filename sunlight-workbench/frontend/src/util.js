@@ -14,6 +14,13 @@ export function fmtMin(m) {
   return h ? `${h}h${r ? `${r}m` : ''}` : `${r}m`
 }
 
+/* 带符号分钟差（B−A）；null/undefined = 缺项，绝不当 0 */
+export function fmtSignedMin(m) {
+  if (m === null || m === undefined) return '—'
+  const sign = m > 0 ? '+' : m < 0 ? '−' : ''
+  return sign + fmtMin(Math.abs(m))
+}
+
 export function fmtTime(iso) {
   return iso.slice(11, 16)
 }
