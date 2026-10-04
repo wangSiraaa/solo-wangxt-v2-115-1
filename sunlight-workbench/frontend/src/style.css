@@ -35,3 +35,32 @@ select, button { padding: 6px; }
 .north-label { color: #ff8a80; font-size: 12px; background: rgba(0,0,0,.5);
   padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 .trace { font-size: 12px; background: #eef4ff; padding: 8px; border-radius: 6px; }
+
+/* ---- 运行对比 ---- */
+.cmp-picker { display: flex; flex-direction: column; gap: 6px;
+  padding-bottom: 8px; border-bottom: 1px solid #ddd; margin-bottom: 8px; }
+.cmp-sides { font-size: 12px; display: grid; gap: 2px; background: #fff;
+  border: 1px solid #ddd; border-radius: 6px; padding: 6px; }
+.side-a { color: #7a4a00; } .side-b { color: #2f4a7a; }
+.cmp-warning { font-size: 12px; color: #8a1f1f; background: #fdecea;
+  border: 1px solid #f3b9b4; border-radius: 6px; padding: 6px 8px;
+  margin: 6px 0; display: grid; gap: 3px; }
+.cmp-table { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.cmp-row { background: #fff; border: 1px solid #e0e3e8; border-radius: 6px;
+  padding: 6px 8px; cursor: pointer; }
+.cmp-row.sel { border-color: #ff4081; box-shadow: 0 0 0 1px #ff4081 inset; }
+.cmp-row.missing { background: #f3f4f6; }
+.cmp-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 4px; }
+.cmp-name { font-size: 13px; font-weight: 600; }
+.cmp-badge { margin-left: auto; font-size: 10px; color: #8a1f1f;
+  background: #fdecea; border-radius: 3px; padding: 1px 5px; }
+.cmp-row table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cmp-row th { text-align: left; color: #666; font-weight: normal;
+  width: 64px; padding: 2px 4px; vertical-align: top; }
+.cmp-row td { padding: 2px 4px; border-top: 1px solid #f0f1f3; }
+.diff.pos { color: #1b7a3d; } .diff.neg { color: #b00020; }
+.diff.zero { color: #555; }
+.cmp-actions { display: flex; gap: 6px; margin-top: 4px; }
+.cmp-actions button { font-size: 11px; padding: 3px 6px; }
+.back-cmp { font-size: 12px; margin-bottom: 8px; }

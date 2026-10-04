@@ -10,6 +10,7 @@ export const api = {
   scenes: () => req('/scenes'),
   seed: () => req('/scenes/seed', { method: 'POST' }),
   scene: (id) => req(`/scenes/${id}`),
+  sceneRuns: (id) => req(`/scenes/${id}/runs`),
   sunpath: (id, date) => req(`/scenes/${id}/sunpath?date=${date}`),
   run: (scene_id, date, step_minutes = 5) =>
     req('/analysis/run', {
@@ -18,6 +19,7 @@ export const api = {
       body: JSON.stringify({ scene_id, date, step_minutes }),
     }),
   runResult: (runId) => req(`/analysis/${runId}`),
+  compare: (runA, runB) => req(`/analysis/compare?a=${runA}&b=${runB}`),
   trace: (runId, pointId, time) =>
     req(`/analysis/${runId}/points/${pointId}/trace` + (time ? `?time=${time}` : '')),
   snapshot: (id) => req(`/snapshots/${id}`),

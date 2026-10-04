@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from . import models, seed
 from .analysis import MeasurePointGeom, analyze_point
+from .compare import build_comparison
 from .db import Base, engine, get_db
 from .geometry import BuildingGeom, build_scene
 from .solar import enu_to_model, sun_vector_enu, solar_positions
@@ -90,6 +91,33 @@ def get_scene(scene_id: int, db: Session = Depends(get_db)):
     return _bundle_payload(*_load_scene_bundle(db, scene_id))
 
 
+@app.get("/api/scenes/{scene_id}/runs")
+def list_scene_runs(scene_id: int, db: Session = Depends(get_db)):
+    """同场景历史运行列表（新→旧），供双运行对比选择。
+
+    point_ids 来自运行时快照 payload，代表该运行**实际覆盖**的测点集合
+    （运行时可能只选了部分测点），不能直接用当前场景测点列表代替。
+    """
+    s = db.get(models.Scene, scene_id)
+    if not s:
+        raise HTTPException(404, "场景不存在")
+    runs = (db.query(models.Run).filter_by(scene_id=scene_id)
+            .order_by(models.Run.created_at.desc(), models.Run.id.desc()).all())
+    out = []
+    for r in runs:
+        snap = db.get(models.Snapshot, r.snapshot_id)
+        point_ids = [p["id"] for p in (snap.payload or {}).get("points", [])]
+        out.append({
+            "run_id": r.id, "date": str(r.run_date),
+            "step_minutes": r.step_minutes, "snapshot_id": r.snapshot_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "point_ids": point_ids,
+            "n_points": len(point_ids),
+            "disclaimer": r.disclaimer,
+        })
+    return out
+
+
 # ---------- 分析 ----------
 
 class RunRequest(BaseModel):
@@ -145,6 +173,31 @@ def run_analysis(req: RunRequest, db: Session = Depends(get_db)):
             fine_samples=r["fine_samples"], summary=r["summary"]))
     db.commit()
     return {"run_id": run.id, "snapshot_id": snap.id, "disclaimer": DISCLAIMER}
+
+
+@app.get("/api/analysis/compare")
+def compare_runs(a: int, b: int, db: Session = Depends(get_db)):
+    """双运行对比：按测点身份对齐两侧日期/累计分钟/分钟差/主要遮挡物。
+
+    仅同一场景的运行可对比；数值比较还要求采样步长一致。
+    缺失测点显式标出（present_in_a/present_in_b=False，diff=None），
+    绝不当作 0 分钟。
+    """
+    if a == b:
+        raise HTTPException(400, "请选择两次不同的运行进行对比")
+    run_a, run_b = db.get(models.Run, a), db.get(models.Run, b)
+    if not run_a or not run_b:
+        raise HTTPException(404, "运行不存在")
+    if run_a.scene_id != run_b.scene_id:
+        raise HTTPException(400, "两次运行不属于同一场景，不能对比")
+    res_a = {r.point_id: r for r in run_a.results}
+    res_b = {r.point_id: r for r in run_b.results}
+    snap_a = db.get(models.Snapshot, run_a.snapshot_id)
+    snap_b = db.get(models.Snapshot, run_b.snapshot_id)
+    return build_comparison(
+        run_a, run_b, res_a, res_b,
+        (snap_a.payload or {}).get("points", []),
+        (snap_b.payload or {}).get("points", []))
 
 
 @app.get("/api/analysis/{run_id}")
